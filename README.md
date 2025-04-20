@@ -83,18 +83,227 @@ Admins can:
 
 ### Example Requests
 
-#### Get Available Seats
+To include these in your API endpoints examples, you can format them like a comprehensive API documentation section. Here’s how you can integrate them:
+
+---
+
+## **API Endpoints**
+
+### **GET /movies**  
+Fetches a list of all movies available for viewing.
+
+#### **Example Request:**
 ```bash
-curl http://localhost:8000/screenings/1/seats
+GET /movies
 ```
 
-#### Create Booking
-```bash
-curl -X POST http://localhost:8000/bookings \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": 1, "screening_id": 1, "seat_ids": [1, 2]}'
+#### **Example Response:**
+```json
+[
+  {
+    "id": 1,
+    "title": "Inception",
+    "genre": "Sci-Fi",
+    "duration": 148,
+    "description": "A thief who steals corporate secrets through dream-sharing."
+  },
+  {
+    "id": 2,
+    "title": "Interstellar",
+    "genre": "Sci-Fi",
+    "duration": 169,
+    "description": "A team travels through a wormhole in space in an attempt to save humanity."
+  }
+]
 ```
 
+---
+
+### **GET /movies/:id**  
+Retrieves details of a specific movie.
+
+#### **Example Request:**
+```bash
+GET /movies/1
+```
+
+#### **Example Response:**
+```json
+{
+  "id": 1,
+  "title": "Inception",
+  "genre": "Sci-Fi",
+  "duration": 148,
+  "description": "A thief who steals corporate secrets through dream-sharing."
+}
+```
+
+---
+
+### **GET /movies/:id/screenings**  
+Gets details of all upcoming screenings for a specific movie.
+
+#### **Example Request:**
+```bash
+GET /movies/1/screenings
+```
+
+#### **Example Response:**
+```json
+[
+  {
+    "screening_id": 10,
+    "movie_id": 1,
+    "start_time": "2025-04-20T18:00:00",
+    "screen_number": 3
+  },
+  {
+    "screening_id": 11,
+    "movie_id": 1,
+    "start_time": "2025-04-21T21:00:00",
+    "screen_number": 1
+  }
+]
+```
+
+---
+
+### **GET /screenings/:id/seats**  
+Returns available and booked seats for a particular screening.
+
+#### **Example Request:**
+```bash
+GET /screenings/10/seats
+```
+
+#### **Example Response:**
+```json
+[
+  { "seat_id": 1, "number": "A1", "is_booked": false },
+  { "seat_id": 2, "number": "A2", "is_booked": true },
+  { "seat_id": 3, "number": "A3", "is_booked": false }
+]
+```
+
+---
+
+### **POST /bookings**  
+Creates a booking for one or more seats in a screening.
+
+#### **Example Request:**
+```bash
+POST /bookings
+Content-Type: application/json
+
+{
+  "user_id": 1,
+  "screening_id": 10,
+  "seat_ids": [1, 3]
+}
+```
+
+#### **Example Response:**
+```json
+{
+  "booking_id": 101,
+  "user_id": 1,
+  "screening_id": 10,
+  "seats_booked": [1, 3],
+  "status": "confirmed"
+}
+```
+
+---
+
+### **POST /bookings/:id/cancel**  
+Cancels an existing booking.
+
+#### **Example Request:**
+```bash
+POST /bookings/101/cancel
+```
+
+#### **Example Response:**
+```json
+{
+  "message": "Booking with ID 101 has been cancelled.",
+  "status": "cancelled"
+}
+```
+
+---
+
+### **GET /bookings?user_id=:id**  
+Fetches all bookings made by a specific user.
+
+#### **Example Request:**
+```bash
+GET /bookings?user_id=1
+```
+
+#### **Example Response:**
+```json
+[
+  {
+    "booking_id": 101,
+    "screening_id": 10,
+    "seats": ["A1", "A3"],
+    "status": "confirmed",
+    "movie_title": "Inception",
+    "start_time": "2025-04-20T18:00:00"
+  },
+  {
+    "booking_id": 102,
+    "screening_id": 11,
+    "seats": ["B1", "B2"],
+    "status": "cancelled",
+    "movie_title": "Inception",
+    "start_time": "2025-04-21T21:00:00"
+  }
+]
+```
+
+---
+
+### **GET /test-db**  
+Checks if the database connection is alive and functioning.
+
+#### **Example Request:**
+```bash
+GET /test-db
+```
+
+#### **Example Response:**
+```json
+{
+  "message": "Database connection successful"
+}
+```
+
+---
+
+### **POST /book**  
+Creates a simplified booking for a user based on the movie and their name.
+
+#### **Example Request:**
+```bash
+POST /book
+Content-Type: application/json
+
+{
+  "movie_id": "1",
+  "user_name": "John Doe"
+}
+```
+
+#### **Example Response:**
+```json
+{
+  "message": "Booking created successfully",
+  "user": "John Doe",
+  "movie_id": "1"
+}
+```
 ---
 
 ## ✨ Key Features
