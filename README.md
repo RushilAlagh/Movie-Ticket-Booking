@@ -7,7 +7,7 @@ A modern, containerized microservices solution for seamless movie ticket booking
 
 ## 📜 System Architecture Diagram
 
-*(Replace with the actual diagram link)*
+![image](https://github.com/user-attachments/assets/fdf26cea-e6d2-4c5e-9f7f-c93a25ee1cd0)
 
 ---
 
