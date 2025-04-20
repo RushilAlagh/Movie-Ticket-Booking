@@ -18,7 +18,7 @@ const pool = new Pool({
 let rabbitConnection;
 let rabbitChannel;
 
-// Process booking with enhanced logging
+// Process booking with enhanced logging and retry mechanism
 async function processBooking(bookingId, retries = 3, delay = 1000) {
   const client = await pool.connect();
   try {
@@ -50,26 +50,27 @@ async function processBooking(bookingId, retries = 3, delay = 1000) {
       await setTimeout(delay);
       return processBooking(bookingId, retries - 1, delay * 2);
     }
+    console.error(`❌ Failed to process booking ${bookingId}:`, error.message);
     throw error;
   } finally {
     client.release();
   }
 }
 
-// Initialize RabbitMQ with proper DLX setup
+// Initialize RabbitMQ with Dead Letter Exchange (DLX) setup
 async function startConsumer() {
   try {
-    // Validate environment
+    // Validate environment variables
     if (!process.env.RABBITMQ_URL) throw new Error('Missing RABBITMQ_URL');
-    
+
     // Connect to RabbitMQ
     rabbitConnection = await amqp.connect(process.env.RABBITMQ_URL);
     rabbitChannel = await rabbitConnection.createChannel();
 
-    // Setup Dead Letter Exchange
+    // Setup Dead Letter Exchange (DLX)
     await rabbitChannel.assertExchange('dead_letter', 'direct', { durable: true });
-    
-    // Main queue with DLX config
+
+    // Main queue with DLX configuration
     await rabbitChannel.assertQueue('booking_queue', {
       durable: true,
       arguments: {
@@ -78,43 +79,43 @@ async function startConsumer() {
       }
     });
 
-    // Dead Letter Queue
+    // Dead Letter Queue (DLQ)
     await rabbitChannel.assertQueue('booking_queue.dlq', { durable: true });
     await rabbitChannel.bindQueue('booking_queue.dlq', 'dead_letter', 'booking_queue.dlq');
 
-    // QoS settings
+    // Set the Quality of Service (QoS) to limit concurrent messages
     rabbitChannel.prefetch(5);
-    
+
     console.log('🚀 Worker ready with proper queue configuration');
 
-    // Message processor
+    // Consume messages from the booking_queue
     rabbitChannel.consume('booking_queue', async (msg) => {
       const bookingId = msg.content.toString();
       try {
-        console.log(`📥 Processing ${bookingId}`);
+        console.log(`📥 Processing booking ${bookingId}`);
         const success = await processBooking(bookingId);
-        
+
         if (success) {
-          rabbitChannel.ack(msg);
-          console.log(`✔️  Acknowledged ${bookingId}`);
+          rabbitChannel.ack(msg);  // Acknowledge successful message processing
+          console.log(`✔️  Acknowledged booking ${bookingId}`);
         } else {
-          rabbitChannel.nack(msg, false, false);
-          console.log(`⏩ Requeued ${bookingId}`);
+          rabbitChannel.nack(msg, false, false);  // Negative ack and don't requeue
+          console.log(`⏩ Requeued booking ${bookingId}`);
         }
       } catch (error) {
-        console.error(`❌ Final failure ${bookingId}:`, error.message);
-        rabbitChannel.nack(msg, false, false);
+        console.error(`❌ Error processing booking ${bookingId}:`, error.message);
+        rabbitChannel.nack(msg, false, false);  // Negative ack and don't requeue
       }
     }, { noAck: false });
 
   } catch (error) {
-    console.error('🔥 Initialization failed:', error);
+    console.error('🔥 Worker initialization failed:', error);
     await shutdown();
     process.exit(1);
   }
 }
 
-// Graceful shutdown
+// Graceful shutdown of all connections
 async function shutdown() {
   try {
     console.log('\n🛑 Shutting down gracefully...');
@@ -127,14 +128,16 @@ async function shutdown() {
   }
 }
 
-// Handle signals
+// Listen for termination signals and perform shutdown
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-// Start service
+// Start RabbitMQ consumer
 startConsumer().catch(shutdown);
 
-// Health check server
+// Health check server to ensure service availability
 require('http').createServer((req, res) => {
   res.status(200).send('Worker OK');
-}).listen(process.env.HEALTH_PORT || 8080);
+}).listen(process.env.HEALTH_PORT || 8080, () => {
+  console.log(`💚 Health check server running on port ${process.env.HEALTH_PORT || 8080}`);
+});
