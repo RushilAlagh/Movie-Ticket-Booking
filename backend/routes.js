@@ -188,24 +188,27 @@ router.get("/test-db", async (req, res) => {
   }
 });
 
-// ➕ New: Get available screenings with movie details
 router.get("/movies/:id/screenings", async (req, res) => {
+    const movieId = parseInt(req.params.id, 10);
+    console.log(`[DEBUG] Fetching screenings for movie ID ${movieId}`);
     try {
       const result = await pool.query(
         `SELECT s.*, m.title as movie_title, m.duration_minutes
-         FROM screenings s
-         JOIN movies m ON s.movie_id = m.id
-         WHERE s.movie_id = $1 AND s.show_time > NOW()
-         ORDER BY s.show_time`,
-        [req.params.id]
+           FROM screenings s
+           JOIN movies m ON s.movie_id = m.id
+          WHERE s.movie_id = $1
+            AND s.show_time > NOW()
+          ORDER BY s.show_time`,
+        [movieId]
       );
+      console.log(`[DEBUG] Found ${result.rows.length} screenings`);
       res.json(result.rows);
     } catch (error) {
-      console.error('Error fetching screenings:', error);
-      res.status(500).json({ error: 'Failed to fetch screenings' });
+      console.error("Error fetching screenings:", error);
+      res.status(500).json({ error: "Failed to fetch screenings" });
     }
   });
-  
+    
   // ➕ New: Enhanced seat availability check
   router.get("/screenings/:id/seats", async (req, res) => {
     try {
